@@ -1,0 +1,88 @@
+# 再利用ワークフロー：各リポジトリの claude-guard-sync.yml から呼ばれる。
+# claude-guard の最新版を取ってきて、差分があれば「守りを更新」の PR を立てる。
+# 自動マージはしない（人が見てマージする）。
+name: claude-guard sync (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      guard_ref:
+        description: 取り込む claude-guard のブランチ・タグ
+        type: string
+        required: false
+        default: main
+      stale_days:
+        description: 更新 PR がこの日数以上放置されたら失敗にして知らせる
+        type: number
+        required: false
+        default: 7
+
+permissions: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: 対象リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: claude-guard を取得
+        uses: actions/checkout@v4
+        with:
+          repository: ringo1781hana-rgb/claude-guard
+          ref: ${{ inputs.guard_ref }}
+          path: .claude-guard-src
+          persist-credentials: false
+
+      - name: 守りを反映
+        run: |
+          python3 -I .claude-guard-src/sync.py --guard .claude-guard-src --target .
+          rm -rf .claude-guard-src
+
+      - name: 差分があれば PR を立てる
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STALE_DAYS: ${{ inputs.stale_days }}
+        run: |
+          set -euo pipefail
+          BR="claude-guard/sync"
+          VER="$(cat .claude/guard/VERSION)"
+
+          if [ -z "$(git status --porcelain -- .claude CLAUDE.md)" ]; then
+            echo "守りは最新です（v$VER）"
+            existing="$(gh pr list --head "$BR" --state open --json number -q '.[0].number' || true)"
+            if [ -n "$existing" ]; then
+              gh pr close "$existing" --delete-branch --comment "すでに最新になったので閉じます。" || true
+            fi
+            exit 0
+          fi
+
+          git config user.name "claude-guard-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BR"
+          git add -A -- .claude CLAUDE.md
+          git commit -m "chore: claude-guard を v$VER に更新"
+          git push -f origin "$BR"
+
+          existing="$(gh pr list --head "$BR" --state open --json number,createdAt -q '.[0] | "\(.number) \(.createdAt)"' || true)"
+          if [ -z "$existing" ]; then
+            gh pr create --head "$BR" \
+              --title "守り（claude-guard）を v$VER に更新" \
+              --body "claude-guard の最新版との差分です。中身を確認してからマージしてください。
+
+          - 自動で作った PR です。自動マージはしません。
+          - 心当たりのない変更（ブロックの解除、送信の許可など）があれば、マージせずに claude-guard 側を確認してください。"
+            echo "PR を立てました"
+          else
+            num="${existing%% *}"
+            created="${existing#* }"
+            age_days=$(( ( $(date +%s) - $(date -d "$created" +%s) ) / 86400 ))
+            echo "既存の PR #$num を更新しました（${age_days} 日経過）"
+            if [ "$age_days" -ge "$STALE_DAYS" ]; then
+              echo "::error::守りの更新 PR #$num が ${age_days} 日マージされていません。古い守りのままです。"
+              exit 1
+            fi
+          fi

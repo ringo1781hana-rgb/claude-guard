@@ -1,0 +1,69 @@
+# データの持ち出し先（受け取り・一時アップロード・トンネル）によく使われる宛先。
+# ここに書いたドメインとそのサブドメインへの通信を止めます。
+# 「/」を含む行は、その文字列がコマンドや URL に入っていたら止めます。
+# 足したいときは claude-guard リポジトリのこのファイルを直してください（各リポジトリには PR で届きます）。
+
+# リクエストを受け取って中身を見られるサービス
+webhook.site
+requestbin.com
+requestbin.net
+m.pipedream.net
+beeceptor.com
+hookbin.com
+requestcatcher.com
+mockbin.org
+postb.in
+ptsv2.com
+ptsv3.com
+
+# トンネル（手元のサーバーをネットに出す）
+ngrok.io
+ngrok.app
+ngrok.dev
+ngrok-free.app
+ngrok-free.dev
+trycloudflare.com
+loca.lt
+localtunnel.me
+serveo.net
+localhost.run
+pinggy.io
+bore.pub
+
+# 貼り付け・一時ファイル置き場
+pastebin.com
+paste.ee
+hastebin.com
+dpaste.org
+dpaste.com
+ghostbin.co
+rentry.co
+transfer.sh
+file.io
+0x0.st
+temp.sh
+catbox.moe
+litterbox.catbox.moe
+tmpfiles.org
+bashupload.com
+oshi.at
+
+# 外部からの通信を記録する調査用サービス（攻撃にも使われる）
+interact.sh
+oast.fun
+oast.pro
+oast.live
+oast.site
+oast.online
+oast.me
+burpcollaborator.net
+oastify.com
+dnslog.cn
+ceye.io
+requestrepo.com
+
+# チャットの Webhook / Bot（メッセージとしてデータを送れる）
+discord.com/api/webhooks
+discordapp.com/api/webhooks
+api.telegram.org
+hooks.slack.com

@@ -1,0 +1,16 @@
+# このファイルを、守りを入れたいリポジトリの .github/workflows/claude-guard-sync.yml に置く。
+# 毎朝、claude-guard の最新版と比べて、差分があれば PR が立つ。
+name: claude-guard sync
+
+on:
+  schedule:
+    - cron: "17 21 * * *"  # 毎朝 6:17（日本時間）
+  workflow_dispatch: {}    # Actions の画面から手動でも動かせる
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    uses: ringo1781hana-rgb/claude-guard/.github/workflows/sync.yml@main
